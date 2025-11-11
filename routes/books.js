@@ -41,5 +41,13 @@ router.post('/bookadded', (req, res, next) => {
   });
 });
 
+router.get('/bargainbooks', (req, res, next) => {
+  const sql = 'SELECT id, name, price FROM books WHERE price < 20.00 ORDER BY price ASC';
+  db.query(sql, (err, rows) => {
+    if (err) return next(err);
+    res.render('bargainbooks', { books: rows });
+  });
+});
+
 // Export the router object so index.js can access it
 module.exports = router
