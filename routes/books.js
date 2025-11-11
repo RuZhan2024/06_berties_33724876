@@ -49,5 +49,34 @@ router.get('/bargainbooks', (req, res, next) => {
   });
 });
 
+router.get('/search', (req, res) => {
+  res.render('search.ejs', { results: null, keyword: '', mode: 'partial' });
+});
+
+router.post('/search', (req, res, next) => {
+  const { keyword, mode } = req.body;
+  if (!keyword) {
+     res.render('search.ejs', { results: [], keyword: '', mode: 'partial' });
+  }
+
+  const trimmed = keyword.trim();
+  let sql, params;
+
+  if (mode === 'exact') {
+    // Basic search: exact title match
+    sql = 'SELECT id, name, price FROM books WHERE name = ? ORDER BY name ASC';
+    params = [trimmed];
+  } else {
+    // Advanced search: partial match (case-insensitive with LOWER)
+    sql = 'SELECT id, name, price FROM books WHERE LOWER(name) LIKE LOWER(?) ORDER BY name ASC';
+    params = [`%${trimmed}%`];
+  }
+
+  db.query(sql, params, (err, rows) => {
+    if (err) return next(err);
+    res.render('search', { results: rows, keyword: trimmed, mode: mode || 'partial' });
+  });
+});
+
 // Export the router object so index.js can access it
 module.exports = router
