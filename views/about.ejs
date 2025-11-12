@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/main.css" />
   </head>
   <body>
+    <%# About page: shows brand blurb + quick CTAs. Expects shopData.shopName. %>
     <header class="container">
       <h1>About <%= shopData.shopName %></h1>
       <p><a href="/">← Back home</a></p>
@@ -14,9 +15,11 @@
 
     <main class="container">
       <section class="card">
+        <%# Static marketing copy. Replace with CMS content if needed. %>
         <p>We sell all sorts of books and nothing else!</p>
         <p class="muted mt-2">Founded in 2025 in London, we’re passionate about stories, learning, and great prices.</p>
         <div class="mt-3">
+          <%# Helpful cross-links to high-traffic pages. %>
           <a class="btn ghost" href="/books/bargainbooks">See bargains</a>
           <a class="btn ghost" href="/books/list">Browse all books</a>
         </div>

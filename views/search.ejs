@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/main.css" />
 </head>
 <body>
+  <%# Search UI: supports exact and partial name matching. Expects 'locals.keyword', 'locals.mode', and optional 'locals.results'. %>
   <header class="container">
     <h1>Search Books</h1>
     <p><a href="/">← Back home</a></p>
@@ -14,19 +15,23 @@
 
   <main class="container">
     <section class="card">
+      <%# POST to /books/search; server performs query and re-renders with results. %>
       <form method="post" action="/books/search" class="form">
         <label>Keyword
+          <%# Echo previous keyword with nullish coalescing for UX. %>
           <input name="keyword" type="text" value="<%= (locals.keyword ?? '') %>" required />
         </label>
 
         <fieldset class="inline">
           <legend>Mode</legend>
           <label>
+            <%# Partial match (SQL LIKE). Default when mode != 'exact'. %>
             <input type="radio" name="mode" value="partial"
                    <%= (locals.mode !== 'exact') ? 'checked' : '' %> />
             Partial (LIKE)
           </label>
           <label>
+            <%# Exact match (SQL =). %>
             <input type="radio" name="mode" value="exact"
                    <%= (locals.mode === 'exact') ? 'checked' : '' %> />
             Exact (=)
@@ -37,6 +42,7 @@
       </form>
     </section>
 
+    <%# Results section only renders after a search. %>
     <% if (locals.results) { %>
       <section class="card mt-4">
         <h2>Results</h2>

@@ -13,15 +13,13 @@ A small Node.js web app built with **Express**, **EJS**, and **MySQL**. It demon
 ## Prerequisites
 
 * Node.js 18+
-* MySQL 8 (or MariaDB compatible)
-
----
+* MySQL 8 
 
 ## Install & Run Locally
 
 ```bash
 # 1) Get the code
-git clone https://github.com/RuZhan2024/berties-books.git
+git https://github.com/RuZhan2024/06_berties_33724876.git
 cd berties-books
 
 # 2) Install dependencies
@@ -47,7 +45,7 @@ password: 'qwertyuiop'
 database: 'berties_books'
 ```
 
-> If you change credentials, update them in `index.js` (or move them to env vars if you prefer).
+> If you change credentials, update them in `index.js`.
 
 ### Start the App
 
@@ -55,8 +53,6 @@ database: 'berties_books'
 npm start
 # visit http://localhost:8000
 ```
-
----
 
 ## Available Routes
 
@@ -111,13 +107,11 @@ berties-books/
 └─ links.txt                   # REQUIRED for submission: home=http://www.doc.gold.ac.uk/usr/122/
 ```
 
----
-
-## Deploying on the University VM
+## Deploying on the VM
 
 ```bash
 # on the VM
-git clone https://github.com/RuZhan2024/berties-books.git
+git clone https://github.com/RuZhan2024/06_berties_33724876.git
 cd berties-books
 npm install
 
@@ -128,7 +122,7 @@ sudo mysql < insert_test_data.sql
 # run the app
 npm start
 # or use a long-running process:
-npx forever start -a -l forever.log -o out.log -e err.log index.js
+forever start -a -l forever.log -o out.log -e err.log index.js
 ```
 
 **Managing the process**
@@ -137,18 +131,5 @@ npx forever start -a -l forever.log -o out.log -e err.log index.js
 npx forever list
 npx forever stop index.js
 ```
-
----
-
-## Submission Checklist (Lab 6 d–f)
-
-* [ ] **All pages present** and styled: home, about, list, add, bargain, search (exact/partial).
-* [ ] **DB setup scripts** included (`create_db.sql`, `insert_test_data.sql`) and working.
-* [ ] App running on VM (port open), optionally managed by **forever**.
-* [ ] **links.txt** present in repo with your live URL:
-
-  ```
-  home=http://www.doc.gold.ac.uk/usr/122/
-  ```
 
 

@@ -7,9 +7,11 @@
     <link rel="stylesheet" href="/main.css" />
   </head>
   <body>
+    <%# Landing page: global nav + shortcuts. Expects shopData.shopName. %>
     <header class="container">
       <h1>Welcome to <%= shopData.shopName %></h1>
       <nav>
+        <%# Primary navigation. Keep hrefs in sync with Express routes. %>
         <ul>
           <li><a href="/">Home</a></li>
           <li><a href="/books/list">All Books</a></li>
@@ -25,6 +27,7 @@
     <main class="container">
       <section class="card">
         <h2>Quick links</h2>
+        <%# CTA list with short labels + buttons. %>
         <ul class="list">
           <li><span class="title">Learn about us</span><a class="btn ghost" href="/about">About <%= shopData.shopName %></a></li>
           <li><span class="title">Find a book fast</span><a class="btn ghost" href="/books/search">Search for books</a></li>

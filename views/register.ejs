@@ -7,12 +7,14 @@
     <link rel="stylesheet" href="/main.css" />
   </head>
   <body>
+    <%# Simple registration form (demo). Expects POST handler at /users/registered. %>
     <header class="container">
       <h1>Register for <%= shopData.shopName %></h1>
       <p><a href="/">← Back home</a></p>
     </header>
 
     <main class="container">
+      <%# Relative form action: from /users/register -> POST /users/registered %>
       <form method="POST" action="registered" class="form card">
         <label>First name
           <input id="first" type="text" name="first" required />
@@ -23,6 +25,7 @@
         <label>Email
           <input id="email" type="email" name="email" required />
         </label>
+        <%# Minimal client-side validation; perform server-side validation and sanitisation. %>
         <button type="submit" class="btn">Register</button>
       </form>
     </main>
