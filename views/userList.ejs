@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="/main.css" />
 </head>
 <body>
-  <%# Renders a table of all available books. Expects 'availableBooks'. %>
+  <%# Renders a table of all users. Expects 'users'. %>
+
   <header class="container">
     <h1>All Users</h1>
     <p><a href="/">← Back home</a></p>
@@ -16,27 +17,28 @@
   <main class="container">
     <% if (!users || users.length === 0) { %>
       <section class="card">
-        <p class="muted">No Users found.</p>
+        <p class="muted">No users found.</p>
       </section>
     <% } else { %>
       <section class="card">
         <table class="table">
+          <caption class="muted">List of all registered users</caption>
           <thead>
             <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Email</th>
+              <th scope="col">ID</th>
+              <th scope="col">Name</th>
+              <th scope="col">Email</th>
             </tr>
           </thead>
           <tbody>
-          <% users.forEach((u, i) => { %>
-            <tr>
-        
-              <td><%= i + 1 %></td>
-              <td><%= u.first_name %> <%= u.last_name%></td>
-              <td><%= u.email %></td>
-            </tr>
-          <% }) %>
+            <% users.forEach((u) => { %>
+              <tr>
+                <!-- If your SELECT includes 'id', this will show the real DB id -->
+                <td><%= u.id %></td>
+                <td><%= u.first_name %> <%= u.last_name %></td>
+                <td><%= u.email %></td>
+              </tr>
+            <% }) %>
           </tbody>
         </table>
       </section>
