@@ -110,7 +110,7 @@ router.post("/login", function (req, res, next) {
       // At this point, the user is authenticated.
       // Store user info in the session later:
       // req.session.userId = user.id;
-      res.redirect("/");
+      res.render("index.ejs");
     });
   });
 });
