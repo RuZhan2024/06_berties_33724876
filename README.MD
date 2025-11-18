@@ -170,8 +170,11 @@ cd 06_berties_33724876
 npm install
 
 # initialize DB (first time only)
-sudo mysql < create_db.sql
-sudo mysql < insert_test_data.sql
+sudo apt-get update
+sudo apt-get install mysql-server
+sudo mysql 
+source create_db.sql
+source insert_test_data.sql
 ```
 
 Create a `.env` file on the VM with the appropriate database credentials.
