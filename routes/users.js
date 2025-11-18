@@ -32,7 +32,28 @@ router.post('/registered', function (req, res, next) {
     })
 });
 
-// GET /list — Retrieve and display all books from the database
+router.get("/login", function(req,res,next) {
+    res.render("login.ejs", {msg: ""})
+})
+
+router.post("/login", function (req,res, next) {
+    const {email, password} = req.body
+    if (!(email&&password)) return res.render("login.ejs", {msg: "Both email and password are required"})
+    const query = "SELECT email, hashed_password FROM users WHERE email = ?"
+    db.query(query, [email], function (err, result) {
+        if (err) return next(err)
+        if (!result.length) return res.render("login.ejs", {msg: "Couldn't find the user!"})
+        const {hashed_password} = result[0]
+        bcrypt.compare(passowrd, hashed_password, function (err, result) {
+            if (err) return next (err)
+            if (result == true) {
+                res.render("index.js");
+            }
+        })
+    })
+});
+
+// GET /list — Retrieve and display all users from the database
 router.get('/userlist', function(req, res, next) {
     let sqlquery = "SELECT * FROM users"; // SQL query to get all books
     
