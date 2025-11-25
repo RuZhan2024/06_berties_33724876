@@ -46,22 +46,24 @@ router.get("/register", function (req, res, next) {
 router.post(
   "/registered",
   [
+    check("username")
+      .isLength({ min: 5, max: 20 })
+      .withMessage("Firstname must be between 5 and 20 characters."),
     check("email")
       .isEmail()
       .withMessage("Please enter a valid email address."),
     check("first")
-      .isLength({ min: 5, max: 20 })
-      .withMessage("Firstname must be between 5 and 20 characters."),
+      .isLength({ min: 1, max: 20 })
+      .withMessage("Firstname must be between 1 and 20 characters."),
       check("last")
-      .isLength({ min: 5, max: 20 })
-      .withMessage("Lastname must be between 5 and 20 characters."),
+      .isLength({ min: 1, max: 20 })
+      .withMessage("Lastname must be between 1 and 20 characters."),
     check("password")
       .isLength({ min: 8 })
       .withMessage("Password must be at least 8 characters long."),
   ],
   function (req, res, next) {
     const result = validationResult(req);
-    console.log("errors: ", result.errors);
     if (!result.isEmpty()) {
       // If validation fails, re-render the register page
       return res.status(400).render("register.ejs", {
@@ -70,6 +72,7 @@ router.post(
     }
 
     // Sanitise user input to protect against XSS (Lab 8b – Tasks 6–7)
+    const username = req.sanitize(req.body.username);
     const first = req.sanitize(req.body.first);
     const last = req.sanitize(req.body.last);
     const email = req.sanitize(req.body.email);
@@ -77,7 +80,7 @@ router.post(
     const confirm_password = req.body.confirm_password;
 
     // Basic input validation: make sure all fields are filled in
-    if (!first || !last || !email || !password || !confirm_password) {
+    if (!(username&&first&&last&&email&&password&&confirm_password)) {
       return res.render("register.ejs", {
         msg: "Please complete all fields before submitting.",
       });
@@ -90,31 +93,31 @@ router.post(
       });
     }
 
-    const selectQuery = "SELECT email FROM users WHERE email = ?";
+    const selectQuery = "SELECT username FROM users WHERE username = ?";
 
     // Check if an account with this email already exists
-    db.query(selectQuery, [email], (err, rows) => {
+    db.query(selectQuery, [username], (err, rows) => {
       if (err) return next(err); // Pass DB errors to Express error handler
 
       if (rows.length > 0) {
         // Do not create a second account with the same email
         return res.render("register.ejs", {
-          msg: "An account with this email already exists. Please log in or use a different email.",
+          msg: "An account with this username already exists. Please log in or use a different username.",
         });
       }
 
       // Email is free — hash the password before saving it
       bcrypt.hash(password, SALT_ROUNDS, (err, hashedPassword) => {
         if (err) return next(err);
-
+        console.log("hashed password: ", hashedPassword);
         const insertQuery =
-          "INSERT INTO users (first_name, last_name, email, hashed_password) VALUES (?, ?, ?, ?)";
+          "INSERT INTO users (username,first_name, last_name, email, hashed_password) VALUES (?, ?, ?, ?, ?)";
 
         // Store the new user in the database
         db.query(
           insertQuery,
-          [first, last, email, hashedPassword],
-          (err, insertResult) => {
+          [username, first, last, email, hashedPassword],
+          (err) => {
             if (err) return next(err);
 
             // Registration succeeded, send user to the login page
@@ -139,27 +142,27 @@ router.get("/login", function (req, res, next) {
 // POST /users/login — handle login
 router.post("/login", function (req, res, next) {
   // Sanitise email; password is not rendered back to the page so no need
-  const email = req.sanitize(req.body.email);
+  const username = req.sanitize(req.body.username);
   const password = req.body.password;
 
   // Make sure both fields are provided
-  if (!email || !password) {
+  if (!username || !password) {
     return res.render("login.ejs", {
-      msg: "Please enter both your email and password.",
+      msg: "Please enter both your username and password.",
     });
   }
 
-  const query = "SELECT id, email, hashed_password, first_name, last_name FROM users WHERE email = ?";
+  const query = "SELECT id, username, email, hashed_password, first_name, last_name FROM users WHERE username = ?";
 
   // Look up the user by email
-  db.query(query, [email], function (err, rows) {
+  db.query(query, [username], function (err, rows) {
     if (err) return next(err);
 
     if (rows.length === 0) {
       // No such email — log failed attempt and show generic message
-      logLoginAttempt(email, false);
+      logLoginAttempt(username, false);
       return res.render("login.ejs", {
-        msg: "Incorrect email or password. Please try again.",
+        msg: "Incorrect username or password. Please try again.",
       });
     }
 
@@ -178,8 +181,8 @@ router.post("/login", function (req, res, next) {
       // At this point, the user is authenticated.
       // Save user session here, when login is successful
       req.session.userId = user.id; // or user.email if you prefer
-      req.session.user = user.first_name + " " + user.last_name;   // store login “username”
-      logLoginAttempt(email, true);
+      req.session.user = user.username;   // store login “username”
+      logLoginAttempt(username, true);
       
       // After login, show the home page (or redirect somewhere else)
       return res.redirect("../");
@@ -193,14 +196,13 @@ router.post("/login", function (req, res, next) {
 
 // GET /users/userlist — list all users (logged-in users only)
 router.get("/userlist", redirectLogin, function (req, res, next) {
-  const sqlquery = "SELECT id, first_name, last_name, email FROM users";
+  const sqlquery = "SELECT id, username, first_name, last_name, email FROM users";
 
   // Fetch all users from the database
   db.query(sqlquery, (err, rows) => {
     if (err) {
       return next(err);
     }
-
     // Render the userList view and pass the users array
     res.render("userList.ejs", { users: rows });
   });

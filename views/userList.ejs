@@ -26,6 +26,7 @@
           <thead>
             <tr>
               <th scope="col">ID</th>
+              <th scope="col">Username</th>
               <th scope="col">Name</th>
               <th scope="col">Email</th>
             </tr>
@@ -35,6 +36,7 @@
               <tr>
                 <!-- If your SELECT includes 'id', this will show the real DB id -->
                 <td><%= u.id %></td>
+                <td><%= u.username %></td>
                 <td><%= u.first_name %> <%= u.last_name %></td>
                 <td><%= u.email %></td>
               </tr>
