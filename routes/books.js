@@ -1,19 +1,14 @@
 // Create a new router
 const express = require("express")
+const { check, validationResult } = require("express-validator")
 const router = express.Router() // Initialize the Express Router
 
-// GET /search — Render the basic search form page
-router.get('/search', function(req, res, next) {
-    // Renders the search view (e.g., search.ejs)
-    res.render("search.ejs")
-});
-
-// GET /search-result — Handle a simple GET-based search result display (likely a legacy or test route)
+// GET /search-result — simple GET-based search result display (legacy route)
 router.get('/search-result', function (req, res, next) {
-    // Uses req.query to retrieve parameters from the URL query string (e.g., ?keyword=term)
-    // searching in the database (this line is a placeholder comment in original code)
-    res.send("You searched for: " + req.query.keyword)
-});
+  const rawKeyword = req.query.keyword || ""
+  const cleaned = req.sanitize(rawKeyword) // protect from XSS in plain text response
+  res.send("You searched for: " + cleaned)
+})
 
 // GET /list — Retrieve and display all books from the database
 router.get('/list', function(req, res, next) {
@@ -32,31 +27,47 @@ router.get('/list', function(req, res, next) {
 
 // GET /addbook — Render the form to add a new book
 router.get("/addbook", function(req,res,next) {
-    res.render("addbook.ejs");
+    res.render("addbook.ejs", { error: "" });
 });
 
-// POST /bookadded — Insert a new book into the database (Lab 6D Task 3)
-router.post('/bookadded', (req, res, next) => {
-  // Extract 'name' and 'price' from the request body (submitted form data)
-  const { name, price } = req.body;
-    
-  // Simple validation check for required fields
-  if (!name || !price) {
-    // Re-render the form with an error message if data is missing
-    return res.render('addbook', { error: 'Name and price are required.' });
+// POST /bookadded — Insert a new book into the database (Lab 8b extension)
+// Adds validation + sanitisation for name and price
+router.post(
+  '/bookadded',
+  [
+    check('name')
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage('Book name is required.'),
+    check('price')
+      .isFloat({ min: 0 })
+      .withMessage('Price must be a number greater than or equal to 0.')
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req)
+
+    if (!errors.isEmpty()) {
+      // Show the first validation error in the form
+      const firstError = errors.array()[0].msg
+      return res.status(400).render('addbook.ejs', { error: firstError })
+    }
+
+    // Sanitise inputs to protect against XSS
+    const name = req.sanitize(req.body.name)
+    const price = parseFloat(req.body.price)
+
+    // SQL query to insert a new row. Uses '?' as placeholders for safety (prepared statements)
+    const sql = 'INSERT INTO books (name, price) VALUES (?, ?)'
+
+    // Execute the insert query
+    db.query(sql, [name, price], (err) => {
+      if (err) return next(err) // Handle database errors
+
+      // Send a confirmation message upon successful insertion
+      res.send(`This book is added to database, name: ${name} price ${price}`)
+    })
   }
-  
-  // SQL query to insert a new row. Uses '?' as placeholders for safety (prepared statements)
-  const sql = 'INSERT INTO books (name, price) VALUES (?, ?)';
-  
-  // Execute the insert query
-  db.query(sql, [name.trim(), parseFloat(price)], (err) => {
-    if (err) return next(err); // Handle database errors
-    
-    // Send a confirmation message upon successful insertion
-    res.send(`This book is added to database, name: ${name} price ${price}`);
-  });
-});
+);
 
 // GET /bargainbooks — Retrieve and display books with price less than $20.00
 router.get('/bargainbooks', (req, res, next) => {
@@ -81,14 +92,17 @@ router.get('/search', (req, res) => {
 // POST /search — Handle the submission of the search form and display results
 router.post('/search', (req, res, next) => {
   // Extract keyword and search mode from the request body
-  const { keyword, mode } = req.body;
-  
+  const rawKeyword = req.body.keyword || '';
+  const mode = req.body.mode || 'partial';
+
+  // Sanitise keyword to protect against XSS when echoed back in the view
+  const trimmed = req.sanitize(rawKeyword.trim());
+
   // If no keyword is provided, re-render the search page with empty results
-  if (!keyword) {
+  if (!trimmed) {
      return res.render('search.ejs', { results: [], keyword: '', mode: 'partial' });
   }
 
-  const trimmed = keyword.trim();
   let sql, params;
 
   // Determine the SQL query based on the selected search mode

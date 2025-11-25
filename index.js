@@ -4,6 +4,7 @@ var ejs = require('ejs')
 const path = require('path')
 const mysql = require('mysql2')
 const session = require('express-session')
+const expressSanitizer = require('express-sanitizer')
 require('dotenv').config()
 
 // Create the express application object
@@ -15,6 +16,9 @@ app.set('view engine', 'ejs')
 
 // Set up the body parser 
 app.use(express.urlencoded({ extended: true }))
+
+// Create an input sanitizer (Lab 8b – Task 6)
+app.use(expressSanitizer())
 
 // Create a session
 app.use(session({

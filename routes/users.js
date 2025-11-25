@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
+const { check, validationResult } = require("express-validator");
 
 // -----------------------------------------------------------------------------
 // Authorisation helper – only allow access if the user is logged in
@@ -36,62 +37,92 @@ function logLoginAttempt(email, wasSuccessful) {
 
 // GET /users/register — show registration form
 router.get("/register", function (req, res, next) {
-  // Pass an empty message the first time the form is shown
+  // Pass a message; you can extend this later to show detailed errors if needed
   res.render("register.ejs", { msg: "" });
 });
 
-// POST /users/registered — handle registration form submission
-router.post("/registered", function (req, res, next) {
-  const { first, last, email, password, confirm_password } = req.body;
+// POST /users/registered — handle registration form submission (Lab 8b)
+// Validates: email, username length, password length
+router.post(
+  "/registered",
+  [
+    check("email")
+      .isEmail()
+      .withMessage("Please enter a valid email address."),
+    check("username")
+      .isLength({ min: 5, max: 20 })
+      .withMessage("Username must be between 5 and 20 characters."),
+    check("password")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters long."),
+  ],
+  function (req, res, next) {
+    const errors = validationResult(req);
 
-  // Basic input validation: make sure all fields are filled in
-  if (!first || !last || !email || !password || !confirm_password) {
-    return res.render("register.ejs", {
-      msg: "Please complete all fields before submitting.",
-    });
-  }
-
-  // Check that the two password fields match
-  if (password !== confirm_password) {
-    return res.render("register.ejs", {
-      msg: "The passwords you entered do not match. Please try again.",
-    });
-  }
-
-  const selectQuery = "SELECT email FROM users WHERE email = ?";
-
-  // Check if an account with this email already exists
-  db.query(selectQuery, [email], (err, rows) => {
-    if (err) return next(err); // Pass DB errors to Express error handler
-
-    if (rows.length > 0) {
-      // Do not create a second account with the same email
-      return res.render("register.ejs", {
-        msg: "An account with this email already exists. Please log in or use a different email.",
+    if (!errors.isEmpty()) {
+      // If validation fails, re-render the register page
+      return res.status(400).render("register.ejs", {
+        msg: "Please correct the highlighted fields (email, username, password).",
       });
     }
 
-    // Email is free — hash the password before saving it
-    bcrypt.hash(password, SALT_ROUNDS, (err, hashedPassword) => {
-      if (err) return next(err);
+    // Sanitise user input to protect against XSS (Lab 8b – Tasks 6–7)
+    const first = req.sanitize(req.body.first);
+    const last = req.sanitize(req.body.last);
+    const username = req.sanitize(req.body.username || "");
+    const email = req.sanitize(req.body.email);
+    const password = req.body.password;
+    const confirm_password = req.body.confirm_password;
 
-      const insertQuery =
-        "INSERT INTO users (first_name, last_name, email, hashed_password) VALUES (?, ?, ?, ?)";
+    // Basic input validation: make sure all fields are filled in
+    if (!first || !last || !email || !password || !confirm_password) {
+      return res.render("register.ejs", {
+        msg: "Please complete all fields before submitting.",
+      });
+    }
 
-      // Store the new user in the database
-      db.query(
-        insertQuery,
-        [first, last, email, hashedPassword],
-        (err, insertResult) => {
-          if (err) return next(err);
+    // Check that the two password fields match
+    if (password !== confirm_password) {
+      return res.render("register.ejs", {
+        msg: "The passwords you entered do not match. Please try again.",
+      });
+    }
 
-          // Registration succeeded, send user to the login page
-          return res.redirect("/users/login");
-        }
-      );
+    const selectQuery = "SELECT email FROM users WHERE email = ?";
+
+    // Check if an account with this email already exists
+    db.query(selectQuery, [email], (err, rows) => {
+      if (err) return next(err); // Pass DB errors to Express error handler
+
+      if (rows.length > 0) {
+        // Do not create a second account with the same email
+        return res.render("register.ejs", {
+          msg: "An account with this email already exists. Please log in or use a different email.",
+        });
+      }
+
+      // Email is free — hash the password before saving it
+      bcrypt.hash(password, SALT_ROUNDS, (err, hashedPassword) => {
+        if (err) return next(err);
+
+        const insertQuery =
+          "INSERT INTO users (first_name, last_name, email, hashed_password) VALUES (?, ?, ?, ?)";
+
+        // Store the new user in the database
+        db.query(
+          insertQuery,
+          [first, last, email, hashedPassword],
+          (err, insertResult) => {
+            if (err) return next(err);
+
+            // Registration succeeded, send user to the login page
+            return res.redirect("/users/login");
+          }
+        );
+      });
     });
-  });
-});
+  }
+);
 
 // -----------------------------------------------------------------------------
 // Login
@@ -105,7 +136,9 @@ router.get("/login", function (req, res, next) {
 
 // POST /users/login — handle login
 router.post("/login", function (req, res, next) {
-  const { email, password } = req.body;
+  // Sanitise email; password is not rendered back to the page so no need
+  const email = req.sanitize(req.body.email);
+  const password = req.body.password;
 
   // Make sure both fields are provided
   if (!email || !password) {
@@ -199,7 +232,8 @@ router.get("/logout", redirectLogin, (req, res) => {
     if (err) {
       return res.redirect("/");
     }
-    res.send("you are now logged out. <a href=" + "../" + ">Home</a>");
+    // Simple confirmation + link back to home
+    res.send('you are now logged out. <a href="/">Home</a>');
   });
 });
 
