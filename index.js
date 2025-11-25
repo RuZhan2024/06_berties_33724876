@@ -1,10 +1,10 @@
 // Import express and ejs
-var express = require ('express')
+var express = require('express')
 var ejs = require('ejs')
 const path = require('path')
-const mysql = require("mysql2");
-require("dotenv").config();
-
+const mysql = require('mysql2')
+const session = require('express-session')
+require('dotenv').config()
 
 // Create the express application object
 const app = express()
@@ -16,13 +16,22 @@ app.set('view engine', 'ejs')
 // Set up the body parser 
 app.use(express.urlencoded({ extended: true }))
 
+// Create a session
+app.use(session({
+  secret: 'somerandomstuff',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    expires: 600000 // session cookie expiry in ms (10 minutes)
+  }
+}))
+
 // Set up public folder (for css and static js)
 app.use(express.static(path.join(__dirname, 'public')))
 
 // Define the database connection pool
-// Define the database connection pool
 const db = mysql.createPool({
-  host: process.env.BB_HOST || "localhost",
+  host: process.env.BB_HOST || 'localhost',
   user: process.env.BB_USER,
   password: process.env.BB_PASSWORD,
   database: process.env.BB_DATABASE,
@@ -30,14 +39,14 @@ const db = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-});
-global.db = db;
+})
+global.db = db
 
 // Define our application-specific data
-app.locals.shopData = {shopName: "Bertie's Books"}
+app.locals.shopData = { shopName: "Bertie's Books" }
 
 // Load the route handlers
-const mainRoutes = require("./routes/main")
+const mainRoutes = require('./routes/main')
 app.use('/', mainRoutes)
 
 // Load the route handlers for /users

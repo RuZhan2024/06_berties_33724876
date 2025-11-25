@@ -2,6 +2,18 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 
+// -----------------------------------------------------------------------------
+// Authorisation helper – only allow access if the user is logged in
+// -----------------------------------------------------------------------------
+const redirectLogin = (req, res, next) => {
+  if (!req.session || !req.session.userId) {
+    // If there's no logged-in user, redirect to the login page
+    return res.redirect("./login");
+  }
+  // User is logged in, go to the next handler
+  next();
+};
+
 // Number of salt rounds used by bcrypt when hashing passwords
 const SALT_ROUNDS = 10;
 
@@ -131,20 +143,23 @@ router.post("/login", function (req, res, next) {
       }
 
       // At this point, the user is authenticated.
-      // (You could store info in the session here later, e.g. req.session.userId = user.id)
+      // Save user session here, when login is successful
+      req.session.userId = user.id; // or user.email if you prefer
+
       logLoginAttempt(email, true);
 
+      // After login, show the home page (or redirect somewhere else)
       return res.render("index.ejs");
     });
   });
 });
 
 // -----------------------------------------------------------------------------
-// User list (for admin / testing)
+// User list (for admin / testing) – protected by redirectLogin
 // -----------------------------------------------------------------------------
 
-// GET /users/userlist — list all users
-router.get("/userlist", function (req, res, next) {
+// GET /users/userlist — list all users (logged-in users only)
+router.get("/userlist", redirectLogin, function (req, res, next) {
   const sqlquery = "SELECT id, first_name, last_name, email FROM users";
 
   // Fetch all users from the database
@@ -159,11 +174,11 @@ router.get("/userlist", function (req, res, next) {
 });
 
 // -----------------------------------------------------------------------------
-// Login audit page
+// Login audit page – also protected
 // -----------------------------------------------------------------------------
 
-// GET /users/audit — show login audit entries
-router.get("/audit", function (req, res, next) {
+// GET /users/audit — show login audit entries (logged-in users only)
+router.get("/audit", redirectLogin, function (req, res, next) {
   const sql =
     "SELECT id, email, was_successful, created_at FROM login_audit ORDER BY created_at DESC";
 
@@ -172,6 +187,19 @@ router.get("/audit", function (req, res, next) {
 
     // `entries` will be an array of audit rows
     res.render("audit.ejs", { entries: rows });
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Logout route – destroy the session and log the user out
+// -----------------------------------------------------------------------------
+
+router.get("/logout", redirectLogin, (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.redirect("/");
+    }
+    res.send("you are now logged out. <a href=" + "../" + ">Home</a>");
   });
 });
 
