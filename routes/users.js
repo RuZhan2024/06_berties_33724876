@@ -68,10 +68,11 @@ router.post(
       .isLength({ min: 8 })
       .withMessage("Password must be at least 8 characters long."),
     check("confirm_password")
-      .custom(validationResult,({req}) => {
+      .custom((value, {req}) => {
         if (value !== req.body.password) {
           throw new Error("The passwords you entered do not match");
         }
+        return true;
       })
   ],
   function (req, res, next) {
