@@ -50,11 +50,11 @@ router.post(
       .isEmail()
       .withMessage("Please enter a valid email address."),
     check("first")
-      .isLength({ min: 2, max: 20 })
-      .withMessage("Firstname must be between 2 and 20 characters."),
+      .isLength({ min: 5, max: 20 })
+      .withMessage("Firstname must be between 5 and 20 characters."),
       check("last")
-      .isLength({ min: 2, max: 20 })
-      .withMessage("Lastname must be between 2 and 20 characters."),
+      .isLength({ min: 5, max: 20 })
+      .withMessage("Lastname must be between 5 and 20 characters."),
     check("password")
       .isLength({ min: 8 })
       .withMessage("Password must be at least 8 characters long."),
