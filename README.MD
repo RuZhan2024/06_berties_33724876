@@ -384,9 +384,8 @@ Sanitisation is applied to string fields that can be displayed back to users (na
 ├─ views/
 │  ├─ index.ejs                # home
 │  ├─ about.ejs                # about page
-│  ├─ list.ejs                 # book list
+│  ├─ list.ejs                 # book list/bargain books
 │  ├─ addbook.ejs              # add book form
-│  ├─ bargainbooks.ejs         # bargain books
 │  ├─ search.ejs               # book search
 │  ├─ register.ejs             # registration form
 │  ├─ login.ejs                # login form
