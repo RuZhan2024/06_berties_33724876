@@ -13,14 +13,14 @@ const redirectLogin = (req, res, next) => {
 };
 
 // GET /search-result — simple GET-based search result display (legacy route)
-router.get("/search-result", redirectLogin, function (req, res, next) {
+router.get("/search-result", function (req, res, next) {
   const rawKeyword = req.query.keyword || "";
   const cleaned = req.sanitize(rawKeyword); // protect from XSS in plain text response
   res.send("You searched for: " + cleaned);
 });
 
 // GET /list — Retrieve and display all books from the database
-router.get("/list", redirectLogin, function (req, res, next) {
+router.get("/list", function (req, res, next) {
   let sqlquery = "SELECT * FROM books"; // SQL query to get all books
 
   // execute sql query
@@ -87,7 +87,7 @@ router.post(
 );
 
 // GET /bargainbooks — Retrieve and display books with price less than $20.00
-router.get("/bargainbooks", redirectLogin, (req, res, next) => {
+router.get("/bargainbooks", (req, res, next) => {
   // SQL query to select books where the price is less than 20.00, ordered by price
   const sql =
     "SELECT id, name, price FROM books WHERE price < 20.00 ORDER BY price ASC";
@@ -107,7 +107,7 @@ router.get("/bargainbooks", redirectLogin, (req, res, next) => {
 });
 
 // GET /search — Render the search form (with initial state)
-router.get("/search", redirectLogin, (req, res) => {
+router.get("/search", (req, res) => {
   // Renders the search form, initializing results to null and mode to 'partial'
   res.render("search.ejs", { results: null, keyword: "", mode: "partial" });
 });
@@ -115,7 +115,6 @@ router.get("/search", redirectLogin, (req, res) => {
 // POST /search — Handle the submission of the search form and display results
 router.post(
   "/search",
-  redirectLogin,
   [
     check("keyword")
       .trim()
