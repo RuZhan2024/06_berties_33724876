@@ -3,19 +3,19 @@ const express = require("express");
 const router = express.Router();
 
 router.get("/books", function (req, res, next) {
-  // Normalise query keys to lowercase so SEARCH / search both work ---
+  // Normalise query keys to lowercase so SEARCH / search both work 
   const q = {};
   for (const [key, value] of Object.entries(req.query)) {
     q[key.toLowerCase()] = value;
   }
 
-  // Read query parameters from the normalised object ---
+  // Read query parameters from the normalised object 
   const search = (q.search || "").trim();
   const minPriceRaw = q.minprice;                 // ?minprice=10
   const maxPriceRaw = q.maxprice || q["max_price"]; // ?maxprice=20 or ?max_price=20
   const sortRaw = (q.sort || "name").toLowerCase(); // ?sort=name|price
 
-  // Build SQL + params ---
+  // Build SQL + params 
   let sql = "SELECT id, name, price FROM books";
   const conditions = [];
   const params = [];
@@ -48,7 +48,7 @@ router.get("/books", function (req, res, next) {
     sql += " WHERE " + conditions.join(" AND ");
   }
 
-  // Safe sort column (whitelist) ---
+  // Safe sort column (whitelist)
   const allowedSortColumns = {
     name: "name",
     price: "price",
@@ -56,7 +56,7 @@ router.get("/books", function (req, res, next) {
   const sortColumn = allowedSortColumns[sortRaw] || "name";
   sql += ` ORDER BY ${sortColumn} ASC`;
 
-  //Execute query ---
+  //Execute query
   db.query(sql, params, (err, rows) => {
     if (err) {
       console.error("DB error in /api/books:", err);
