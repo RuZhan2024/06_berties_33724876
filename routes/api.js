@@ -2,34 +2,68 @@
 const express = require("express");
 const router = express.Router();
 
-const result = { "coord": { "lon": -0.1257, "lat": 51.5085 }, "weather": [{ "id": 801, "main": "Clouds", "description": "few clouds", "icon": "02d" }], "base": "stations", "main": { "temp": 282.77, "feels_like": 280.88, "temp_min": 281.76, "temp_max": 283.78, "pressure": 1004, "humidity": 83, "sea_level": 1004, "grnd_level": 1000 }, "visibility": 10000, "wind": { "speed": 3.6, "deg": 180 }, "clouds": { "all": 24 }, "dt": 1764689635, "sys": { "type": 2, "id": 2075535, "country": "GB", "sunrise": 1764661531, "sunset": 1764690886 }, "timezone": 0, "id": 2643743, "name": "London", "cod": 200 }
+router.get("/books", function (req, res, next) {
+  // Normalise query keys to lowercase so SEARCH / search both work ---
+  const q = {};
+  for (const [key, value] of Object.entries(req.query)) {
+    q[key.toLowerCase()] = value;
+  }
 
-router.get('/books', function (req, res, next) {
+  // Read query parameters from the normalised object ---
+  const search = (q.search || "").trim();
+  const minPriceRaw = q.minprice;                 // ?minprice=10
+  const maxPriceRaw = q.maxprice || q["max_price"]; // ?maxprice=20 or ?max_price=20
+  const sortRaw = (q.sort || "name").toLowerCase(); // ?sort=name|price
 
-    // Extract keyword and search mode from the request body
-    const rawKeyword = req.query.search || "";
-    const sort = req.sanitize(req.query.sort) || "name";
-    // Sanitise keyword to protect against XSS when echoed back in the view
-    const trimmed = req.sanitize(rawKeyword.trim());
+  // Build SQL + params ---
+  let sql = "SELECT id, name, price FROM books";
+  const conditions = [];
+  const params = [];
 
-    let sql, params;
+  // Search by name (case-insensitive)
+  if (search) {
+    conditions.push("LOWER(name) LIKE LOWER(?)");
+    params.push(`%${search}%`);
+  }
 
-    // Advanced search: partial match (case-insensitive search using LOWER() and LIKE)
-    sql =
-        "SELECT id, name, price FROM books WHERE LOWER(name) LIKE LOWER(?) ORDER BY (?) ASC";
-    params = [`%${trimmed}%`, sortby]; // Parameter is the trimmed keyword wrapped in wildcards (%)
+  // Min price
+  if (minPriceRaw !== undefined && minPriceRaw !== "") {
+    const minPrice = Number(minPriceRaw);
+    if (!Number.isNaN(minPrice)) {
+      conditions.push("price >= ?");
+      params.push(minPrice);
+    }
+  }
 
-    // Execute the dynamic search query
-    db.query(sql, params, (err, rows) => {
-        if (err) return next(err); // Handle database errors
+  // Max price
+  if (maxPriceRaw !== undefined && maxPriceRaw !== "") {
+    const maxPrice = Number(maxPriceRaw);
+    if (!Number.isNaN(maxPrice)) {
+      conditions.push("price <= ?");
+      params.push(maxPrice);
+    }
+  }
 
-        // Render the search view again, passing the results and the search criteria for context
-        res.json({
-            results: rows,
-        });
-    });
-})
+  if (conditions.length > 0) {
+    sql += " WHERE " + conditions.join(" AND ");
+  }
 
+  // Safe sort column (whitelist) ---
+  const allowedSortColumns = {
+    name: "name",
+    price: "price",
+  };
+  const sortColumn = allowedSortColumns[sortRaw] || "name";
+  sql += ` ORDER BY ${sortColumn} ASC`;
 
+  //Execute query ---
+  db.query(sql, params, (err, rows) => {
+    if (err) {
+      console.error("DB error in /api/books:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(rows);
+  });
+});
 
 module.exports = router;
