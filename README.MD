@@ -13,6 +13,7 @@ It includes:
 - Server-side **validation** and **sanitisation** on key forms.
 - A **weather forecast** page calling the OpenWeatherMap API (`/weather`).  
 - A simple **JSON Books API** (`/api/books`) with search, price filters and sorting.
+- An **ungraded JSON API extension** with pagination (`/api/books_limit`) and an EJS test page (`/api-test`) to exercise both API endpoints.
 
 ## Technologies Used
 
@@ -166,15 +167,16 @@ The app exposes a small **JSON API** for books. This is intended to be consumed 
 
 ### Base URL
 
-All API routes are mounted under `/api`:
+All JSON API routes are mounted under `/api`:
 
-* `GET /api/books` — return books as JSON
+* `GET /api/books` — return books as JSON (graded route).
+* `GET /api/books_limit` — return books as JSON with pagination metadata.
 
-The API is **public** (not behind login) so it can be accessed without authentication.
+The JSON API is **public** (not behind login) so it can be accessed without authentication.
 
 ### JSON format
 
-Responses are JSON arrays of books, e.g.:
+The main endpoint (`/api/books`) responds with a JSON **array** of books, e.g.:
 
 ```json
 [
@@ -183,9 +185,27 @@ Responses are JSON arrays of books, e.g.:
 ]
 ```
 
-In case of database errors, the API returns a JSON representation of the error object.
+In case of database errors, the API returns a JSON error object.
 
-### Query parameters
+The extended endpoint (`/api/books_limit`) returns a **paged** response:
+
+```json
+{
+  "version": "2",
+  "page": 1,
+  "per_page": 10,
+  "total": 23,
+  "total_pages": 3,
+  "items": [
+    { "id": 1, "name": "Brighton Rock", "price": 20.25 },
+    { "id": 2, "name": "Brave New World", "price": 25.00 }
+  ]
+}
+```
+
+This endpoint is an ungraded extension to demonstrate paginated APIs and is not required by the core lab spec.
+
+### Query parameters – `/api/books`
 
 The `/api/books` endpoint supports several optional query parameters:
 
@@ -199,19 +219,19 @@ Examples:
 * `GET /api/books?search=Brighton`
 * `GET /api/books?search=world`
 
-#### 2. `minprice` and `max_price` – price range filters
+#### 2. `minprice` and `maxprice` – price range filters
 
 * `minprice` — only return books with `price >= minprice`.
-* `max_price` — only return books with `price <= max_price`.
+* `maxprice` — only return books with `price <= maxprice`.
 * Both are optional; if omitted, that side of the range is not applied.
 
 Examples:
 
 * `GET /api/books?minprice=5`
-* `GET /api/books?max_price=15`
-* `GET /api/books?minprice=5&max_price=20`
+* `GET /api/books?maxprice=15`
+* `GET /api/books?minprice=5&maxprice=20`
 
-Numeric values are parsed safely; invalid or empty values are ignored.
+Numeric values are parsed; invalid or empty values are ignored.
 
 #### 3. `sort` – sort order
 
@@ -219,28 +239,72 @@ Numeric values are parsed safely; invalid or empty values are ignored.
 * `sort=price` — sort numerically by price ascending.
 * Defaults to `name` if `sort` is missing or invalid.
 
-Example:
+Examples:
 
 * `GET /api/books?sort=price`
-* `GET /api/books?search=world&minprice=5&max_price=20&sort=price`
+* `GET /api/books?search=world&minprice=5&maxprice=20&sort=price`
 
 The sort column is restricted to a small **whitelist** (`name`, `price`) to avoid SQL injection from user-provided column names.
 
-### Putting it together – example requests
+### Ungraded extension: `/api/books_limit` (pagination)
 
-Some example requests and what they do:
+The ungraded extension endpoint `/api/books_limit` supports the **same filters** as `/api/books`:
+
+* `search`
+* `minprice`
+* `maxprice`
+
+On top of that, it supports basic pagination:
+
+* `page` — which page to return (1-based, default `1`).
+* `per_page` — how many items per page (default `10`, capped at `50`).
+
+The response includes:
+
+* `version` — API version string (`"2"`).
+* `page` / `per_page` — current page and page size.
+* `total` — total number of matching books.
+* `total_pages` — derived from `total / per_page`.
+* `items` — the current page of book records.
+
+Example:
+
+```http
+GET /api/books_limit?search=world&minprice=5&maxprice=30&sort=price&page=2&per_page=5
+```
+
+This returns the second page of results that match the given filters.
+
+### API test page (EJS, ungraded)
+
+To make testing easier, there is a small HTML page at:
+
+* `GET /api-test`
+
+This is **not** part of the JSON API; it is a normal EJS view that uses `fetch()` in the browser to call:
 
 * `GET /api/books`
-  → All books, sorted by name.
+* `GET /api/books_limit`
 
-* `GET /api/books?search=Brighton`
-  → Only books whose names contain “Brighton”.
+The page:
 
-* `GET /api/books?minprice=5&max_price=15`
-  → Books priced between £5 and £15 inclusive.
+* Lives in `views/test_apis.ejs`.
+* Uses the shared `main.css` styles (cards, tables, buttons) so it looks consistent with the rest of the site.
+* Contains two small forms:
 
-* `GET /api/books?search=world&minprice=5&max_price=30&sort=price`
-  → Books matching “world” in the name, priced between £5 and £30, sorted by price ascending.
+  * A form to call `/api/books` and show the raw JSON and a table of results.
+  * A form to call `/api/books_limit`, including `page` and `per_page` inputs, and a simple pagination info line (`Page X of Y • total items: Z`).
+
+The route is defined in the main router:
+
+```js
+// Simple page to try both /api/books and /api/books_limit
+router.get("/api-test", (req, res) => {
+  res.render("test_apis", { title: "Books API tester" });
+});
+```
+
+This page is mainly for debugging / demonstration of the API and is an **ungraded** extra.
 
 ## Session Management & Authorisation
 
@@ -323,7 +387,9 @@ The following routes are intentionally public:
 * `GET /users/login` – login form.
 * `POST /users/login` – login handler.
 * `GET /weather` – weather forecast page.
-* `GET /api/books` – JSON books API.
+* `GET /api/books` – JSON books API (graded).
+* `GET /api/books_limit` – paginated JSON books API (ungraded extension).
+* `GET /api-test` – EJS test page for the books APIs.
 
 These remain open so users (or other applications) can:
 
@@ -331,6 +397,7 @@ These remain open so users (or other applications) can:
 * Register and log in.
 * Access the weather feature.
 * Consume the books API without logging in.
+* Manually test the API via the `/api-test` helper page.
 
 ### Logout
 
@@ -517,10 +584,10 @@ Sanitisation is applied to string fields that can be displayed back to users (na
 ├─ public/
 │  └─ main.css                 # shared styles for all pages
 ├─ routes/
-│  ├─ main.js                  # home and about routes
+│  ├─ main.js                  # home, about, and /api-test helper page
 │  ├─ books.js                 # book-related routes (list/add/search/bargain)
 │  ├─ users.js                 # registration, login, user list, audit
-│  └─ api.js                   # JSON API for books (/api/books)
+│  └─ api.js                   # JSON API for books (/api/books, /api/books_limit)
 ├─ views/
 │  ├─ index.ejs                # home
 │  ├─ about.ejs                # about page
@@ -531,7 +598,8 @@ Sanitisation is applied to string fields that can be displayed back to users (na
 │  ├─ login.ejs                # login form
 │  ├─ userList.ejs             # list of users
 │  ├─ audit.ejs                # login audit table
-│  └─ weatherforecast.ejs      # weather search + results page
+│  ├─ weatherforecast.ejs      # weather search + results page
+│  └─ test_apis.ejs            # (ungraded) page to exercise /api/books and /api/books_limit
 ├─ create_db.sql               # database schema + app user creation
 ├─ insert_test_data.sql        # initial sample data (books + demo user)
 ├─ index.js                    # Express app bootstrap, sessions, MySQL pool
@@ -599,4 +667,3 @@ The file `links.txt` in the project root contains a single line pointing to the 
 ```text
 home=http://www.doc.gold.ac.uk/usr/122/
 ```
-
