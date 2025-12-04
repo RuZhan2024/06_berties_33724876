@@ -235,8 +235,9 @@
     }
 
     // Wire up both forms
-    attachApiForm("form-basic", "/api/books", "basic-json", "basic-table", { paged: false });
-    attachApiForm("form-limit", "/api/books_limit", "limit-json", "limit-table", { paged: true });
+    // Use relative URLs so it works locally and on the VM (/usr/122)
+    attachApiForm("form-basic", "api/books", "basic-json", "basic-table", { paged: false });
+    attachApiForm("form-limit", "api/books_limit", "limit-json", "limit-table", { paged: true });
   </script>
 </body>
 </html>
