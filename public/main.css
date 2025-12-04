@@ -289,7 +289,8 @@ a.btn-logout:visited {
 .form input[type="text"],
 .form input[type="number"],
 .form input[type="email"],
-.form input[type="password"] {
+.form input[type="password"],
+.form select {
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;

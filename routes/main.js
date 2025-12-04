@@ -78,7 +78,7 @@ router.get("/weather", (req, res, next) => {
           : "",
       windSpeed: weather.wind && weather.wind.speed,
       windDeg: weather.wind && weather.wind.deg,
-      raw: weather, // keep full data if you need extra fields in the view
+      raw: weather, // keep full data in case we need extra fields in the view
     };
 
     res.render("weatherforecast.ejs", {
@@ -87,6 +87,12 @@ router.get("/weather", (req, res, next) => {
     });
   });
 });
+
+// Simple page to try both /api/books and /api/books_limit
+router.get("/api-test", (req, res) => {
+  res.render("test_apis", { title: "Books API tester" });
+});
+
 
 // Export the router object so index.js can access it
 module.exports = router;

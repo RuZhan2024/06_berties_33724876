@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= title || "Books API tester" %></title>
+  <link rel="stylesheet" href="/main.css">
+</head>
+<body>
+  <!-- Page header -->
+  <header class="container">
+      <h1><%= title %></h1>
+      <p><a href="/">← Back home</a></p>
+    </header>
+
+  <main class="container">
+
+    <!-- /api/books (graded route) -->
+    <section class="section card">
+      <h2>/api/books</h2>
+      <p class="muted mt-2">
+        Simple JSON list with optional <code>search</code>, <code>minprice</code>, <code>maxprice</code> and <code>sort</code> (name / price).
+      </p>
+
+      <form id="form-basic" class="form mt-3">
+        <label>
+          Search by name
+          <input type="text" name="search" placeholder="e.g. harry">
+        </label>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <label style="flex:1 1 140px;">
+            Min price
+            <input type="number" name="minprice" step="0.01" min="0" placeholder="e.g. 5">
+          </label>
+          <label style="flex:1 1 140px;">
+            Max price
+            <input type="number" name="maxprice" step="0.01" min="0" placeholder="e.g. 20">
+          </label>
+        </div>
+
+        <label>
+          Sort by
+          <select name="sort">
+            <option value="name">Name (A–Z)</option>
+            <option value="price">Price (low → high)</option>
+          </select>
+        </label>
+
+        <button type="submit" class="btn">Fetch /api/books</button>
+      </form>
+
+      <div class="mt-3">
+        <h3 class="muted">Raw JSON</h3>
+        <pre id="basic-json"
+             class="mt-2"
+             style="white-space:pre-wrap; background:#1118270d; padding:10px; border-radius:8px; font-size:13px; max-height:320px; overflow:auto;"></pre>
+
+        <h3 class="muted mt-3">Table view</h3>
+        <table class="table mt-2" id="basic-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Price</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- /api/books_limit (ungraded extension) -->
+    <section class="section card">
+      <h2>/api/books_limit</h2>
+      <p class="muted mt-2">
+        Same filters as above, plus <code>page</code> and <code>per_page</code>. Returns paging metadata and an <code>items</code> array.
+      </p>
+
+      <form id="form-limit" class="form mt-3">
+        <label>
+          Search by name
+          <input type="text" name="search" placeholder="e.g. harry">
+        </label>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <label style="flex:1 1 140px;">
+            Min price
+            <input type="number" name="minprice" step="0.01" min="0" placeholder="e.g. 5">
+          </label>
+          <label style="flex:1 1 140px;">
+            Max price
+            <input type="number" name="maxprice" step="0.01" min="0" placeholder="e.g. 20">
+          </label>
+        </div>
+
+        <label>
+          Sort by
+          <select name="sort">
+            <option value="name">Name (A–Z)</option>
+            <option value="price">Price (low → high)</option>
+          </select>
+        </label>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <label style="flex:1 1 120px;">
+            Page
+            <input type="number" name="page" min="1" value="1">
+          </label>
+          <label style="flex:1 1 120px;">
+            Per page
+            <input type="number" name="per_page" min="1" max="50" value="10">
+          </label>
+        </div>
+
+        <button type="submit" class="btn secondary">Fetch /api/books_limit</button>
+      </form>
+
+      <div class="mt-3">
+        <h3 class="muted">Raw JSON</h3>
+        <pre id="limit-json"
+             class="mt-2"
+             style="white-space:pre-wrap; background:#1118270d; padding:10px; border-radius:8px; font-size:13px; max-height:320px; overflow:auto;"></pre>
+
+        <h3 class="muted mt-3">Table view</h3>
+        <p class="muted" id="limit-meta" style="font-size:13px;"></p>
+
+        <table class="table mt-2" id="limit-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Price</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Generic helper to attach a form to an API endpoint
+    function attachApiForm(formId, url, jsonId, tableId, options) {
+      const form = document.getElementById(formId);
+      const jsonBox = document.getElementById(jsonId);
+      const table = document.getElementById(tableId);
+      if (!form || !jsonBox || !table) return;
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const params = new URLSearchParams();
+        const data = new FormData(form);
+        for (const [key, value] of data.entries()) {
+          if (value !== "") params.append(key, value);
+        }
+
+        const fullUrl = url + (params.toString() ? "?" + params.toString() : "");
+        jsonBox.textContent = "Loading " + fullUrl + " …";
+        table.style.display = "none";
+
+        try {
+          const res = await fetch(fullUrl);
+          const text = await res.text();
+          let json;
+          try {
+            json = JSON.parse(text);
+          } catch (parseErr) {
+            // If it's not JSON for some reason, just dump the text
+            jsonBox.textContent = text;
+            return;
+          }
+
+          jsonBox.textContent = JSON.stringify(json, null, 2);
+          renderBooksTable(table, json, options);
+        } catch (err) {
+          jsonBox.textContent = "Error: " + err.message;
+        }
+      });
+    }
+
+    // Renders books into the given table.
+    // For /api/books → json is an array
+    // For /api/books_limit → json.items is the array
+    function renderBooksTable(table, json, options) {
+      const isPaged = options && options.paged;
+      const items = isPaged ? (json.items || []) : json;
+
+      const tbody = table.querySelector("tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      if (!Array.isArray(items) || items.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 3;
+        td.textContent = "No results.";
+        tbody.appendChild(tr);
+        tr.appendChild(td);
+        table.style.display = "table";
+        return;
+      }
+
+      items.forEach((book) => {
+        const tr = document.createElement("tr");
+
+        const tdId = document.createElement("td");
+        tdId.textContent = book.id;
+
+        const tdName = document.createElement("td");
+        tdName.textContent = book.name;
+
+        const tdPrice = document.createElement("td");
+        tdPrice.textContent = book.price;
+
+        tr.appendChild(tdId);
+        tr.appendChild(tdName);
+        tr.appendChild(tdPrice);
+        tbody.appendChild(tr);
+      });
+
+      table.style.display = "table";
+
+      // For /books_limit, show a little meta text as well
+      if (isPaged) {
+        const meta = document.getElementById("limit-meta");
+        if (meta && json && typeof json === "object") {
+          meta.textContent =
+            "Page " + json.page +
+            " of " + json.total_pages +
+            " • total items: " + json.total;
+        }
+      }
+    }
+
+    // Wire up both forms
+    attachApiForm("form-basic", "/api/books", "basic-json", "basic-table", { paged: false });
+    attachApiForm("form-limit", "/api/books_limit", "limit-json", "limit-table", { paged: true });
+  </script>
+</body>
+</html>
